@@ -8,14 +8,18 @@ const url = 'https://pendataan.baliprov.go.id/';
 
 const Bali = require('../models/bali');
 
-const scraper = async () => {
+const scraper = async (startDate = new Date) => {
     const browser = await puppeteer.launch({
         headless: config.app.env === 'production',
         userDataDir: path.join(__dirname, '/../../temp')
     });
 
-    landingPageToday(await browser.newPage());
-    
+    if (moment(startDate).isBefore(moment(new Date), 'day')) {
+        landingPageDate(await browser.newPage(), startDate);
+    } else {
+        landingPageToday(await browser.newPage());
+    }
+
     try {
         const pages = await browser.pages();
         pages[0].close();
@@ -29,8 +33,7 @@ const landingPageToday = async (page) => {
         waitUntil: 'networkidle2'
     });
 
-    const body = await page.$eval('body', element => element.innerHTML);
-    const data = getData(body);       
+    const data = getData(await page.$eval('body', element => element.innerHTML));
     for (const key in data) {
         if (data.hasOwnProperty(key)) {
             const datetime = moment(new Date);
@@ -52,12 +55,53 @@ const landingPageToday = async (page) => {
     await page.close();
 }
 
-const landingPageDate = (page, startDate) => {
+const landingPageDate = async (page, date) => {
     await page.goto(url, {
         waitUntil: 'networkidle2'
     });
 
+    const startDate = moment(date);
+    const endDate = moment(new Date);
 
+    for (let i = moment(startDate); i.isBefore(endDate); i.add(1, 'days')) {
+        const filterDate = i.format('MM/DD/YYYY');
+
+        await page.focus('#tanggal');
+        await page.keyboard.type(filterDate);
+
+        await Promise.all([
+            page.click('input.btn.btn-success'),
+            page.waitForNavigation({
+                waitUntil: 'networkidle2'
+            }),
+        ]);
+
+        if (await page.$('.ui-exception-class') === null) {
+            const data = getData(await page.$eval('body', element => element.innerHTML));
+            for (const key in data) {
+                if (data.hasOwnProperty(key)) {
+                    const element = {...data[key],...{
+                        date: i.format("YYYY-MM-DD")
+                    }};
+                    
+                    Bali.updateOrCreate(element, {
+                        date: element.date,
+                        kabupaten: element.kabupaten
+                    });
+                }
+            }
+        }
+
+        await page.goto(url, {
+            waitUntil: 'networkidle2'
+        });
+    }
+
+    await page.goto('about:blank', {
+        waitUntil: 'networkidle2'
+    });
+
+    await page.close();
 }
 
 const getData = (html) => {
@@ -78,4 +122,6 @@ const getData = (html) => {
 
 const findVariable = (text, variable) => text.match(variable);
 
-scraper();
+module.exports = {
+    scraper
+}

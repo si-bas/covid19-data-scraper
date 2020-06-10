@@ -16,8 +16,12 @@ const port = config.app.port;
 
 app.use(express.json());
 
-glob.sync( './routes/**/*.js' ).forEach( function( file ) {
-    app.use(require(path.resolve(file)));
+glob.sync( './routes/api/*.js' ).forEach( function( file ) {
+    app.use('/api', require(path.resolve(file)));
+});
+
+glob.sync( './routes/web/*.js' ).forEach( function( file ) {
+    app.use('/web', require(path.resolve(file)));
 });
 
 app.get('/', (req, res) => {

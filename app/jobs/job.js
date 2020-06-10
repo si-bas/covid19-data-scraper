@@ -1,5 +1,5 @@
 const dailyBali = require("./daily-bali");
 
-module.exports = () => {
+(async () => {
     dailyBali.run();
-}
+})()

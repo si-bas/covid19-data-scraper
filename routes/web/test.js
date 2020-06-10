@@ -1,6 +1,6 @@
 const router = require('express').Router();
 
-router.get('/web/test', (req, res) => {
+router.get('/test', (req, res) => {
     return res.status(200).json('Hello world');
 });
 

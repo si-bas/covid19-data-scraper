@@ -1,8 +1,9 @@
 const cron = require("node-cron");
+const baliService = require('./../services/bali');
 
 const run = async () => {
-    cron.schedule("* * * * *", function() {
-        console.log("running a task every minute");
+    cron.schedule("5 4 * * *", function() {
+        baliService.scraper();
     });
 }
 
